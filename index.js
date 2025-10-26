@@ -59,6 +59,11 @@ async function generatePDFBuffer(tracks) {
   return Buffer.from(pdfBytes);
 }
 
+app.get('/health', (req, res) => {
+  res.status(200).send('ok');
+});
+
+
 app.use(cors());
 app.use(express.json());
 
