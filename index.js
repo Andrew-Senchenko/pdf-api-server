@@ -46,7 +46,7 @@ async function generatePDFBuffer(tracks) {
   let trackIndex = 0;
   while (trackIndex < tracks.length) {
     const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    page.drawText('Избранные треки:', {
+    page.drawText('Выбранные треки:', {
       x: MARGIN_LEFT,
       y: PAGE_HEIGHT - MARGIN_TOP,
       size: TITLE_FONT_SIZE,
