@@ -17,6 +17,9 @@ const TITLE_FONT_SIZE = 20;
 const TRACK_FONT_SIZE = 14;
 const LINE_HEIGHT = 22;
 
+// Временное хранилище для payload (id => tracks)
+const payloadStorage = new Map();
+
 function addTracksToPage(page, customFont, tracks, startIndex) {
   let y = PAGE_HEIGHT - MARGIN_TOP - TITLE_FONT_SIZE - 15;
   for (let i = 0; i < tracks.length; i++) {
@@ -59,44 +62,53 @@ async function generatePDFBuffer(tracks) {
   return Buffer.from(pdfBytes);
 }
 
+app.use(cors());
+app.use(express.json());
+
+// POST: сохранить payload, вернуть короткий id
+app.post('/store-pdf-payload', (req, res) => {
+  try {
+    const { tracks } = req.body;
+    if (!Array.isArray(tracks)) {
+      return res.status(400).json({ error: 'tracks must be array' });
+    }
+
+    // генерируем короткий id 
+    const id = Math.random().toString(36).substr(2, 9);
+    payloadStorage.set(id, tracks);
+
+    res.json({ id, pdf_url: `/generate-pdf?id=${id}` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// для проверки состояния сервиса
 app.get('/health', (req, res) => {
   res.status(200).send('ok');
 });
 
-
-app.use(cors());
-app.use(express.json());
-
-// POST: для обычных браузеров
-app.post('/generate-pdf', async (req, res) => {
-  try {
-    const { tracks } = req.body;
-    const pdfBuffer = await generatePDFBuffer(tracks);
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=favorites.pdf');
-    res.send(pdfBuffer);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Ошибка сервера');
-  }
-});
-
-// GET: совместимость с браузерами мессенджеров
+// GET: PDF по id или tracks (старый режим для совместимости)
 app.get('/generate-pdf', async (req, res) => {
   try {
-    const tracksJson = req.query.tracks;
-    if (!tracksJson) {
-      return res.status(400).send('Параметр tracks обязателен');
+    let tracks;
+    if (req.query.id) {
+      tracks = payloadStorage.get(req.query.id);
+      if (!tracks) {
+        return res.status(404).send('Не найдено');
+      }
+    } else if (req.query.tracks) {
+      tracks = JSON.parse(decodeURIComponent(req.query.tracks));
+    } else {
+      return res.status(400).send('Не переданы треки!');
     }
-    const tracks = JSON.parse(decodeURIComponent(tracksJson));
     const pdfBuffer = await generatePDFBuffer(tracks);
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=favorites.pdf');
     res.send(pdfBuffer);
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     res.status(500).send('Ошибка сервера');
   }
 });
@@ -104,3 +116,4 @@ app.get('/generate-pdf', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
