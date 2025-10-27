@@ -73,11 +73,10 @@ app.post('/store-pdf-payload', (req, res) => {
       return res.status(400).json({ error: 'tracks must be array' });
     }
 
-    // генерируем короткий id 
     const id = Math.random().toString(36).substr(2, 9);
     payloadStorage.set(id, tracks);
 
-    res.json({ id, pdf_url: `/generate-pdf?id=${id}` });
+    res.json({ id, pdf_url: `/generate-pdf.pdf?id=${id}` });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -89,8 +88,8 @@ app.get('/health', (req, res) => {
   res.status(200).send('ok');
 });
 
-// GET: PDF по id или tracks (старый режим для совместимости)
-app.get('/generate-pdf', async (req, res) => {
+// Универсальный хендлер генерации PDF (использован в двух роутах)
+async function sendPdf(req, res) {
   try {
     let tracks;
     if (req.query.id) {
@@ -105,15 +104,19 @@ app.get('/generate-pdf', async (req, res) => {
     }
     const pdfBuffer = await generatePDFBuffer(tracks);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=favorites.pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="tracklist The Party!.pdf"');
     res.send(pdfBuffer);
   } catch (e) {
     console.error(e);
     res.status(500).send('Ошибка сервера');
   }
-});
+}
+
+// GET: PDF по id или tracks (старый режим для совместимости)
+app.get('/generate-pdf', sendPdf);
+// Новый alias для .pdf — предпочтительно для мессенджеров и ссылок
+app.get('/generate-pdf.pdf', sendPdf);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
