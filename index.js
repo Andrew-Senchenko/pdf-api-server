@@ -88,6 +88,12 @@ app.get('/health', (req, res) => {
   res.status(200).send('ok');
 });
 
+app.get('/healthz', (req, res) => {
+  res.status(200).send('ok');
+});
+
+
+
 // Универсальный хендлер генерации PDF (использован в двух роутах)
 async function sendPdf(req, res) {
   try {
